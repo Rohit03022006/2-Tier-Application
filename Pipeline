@@ -1,0 +1,66 @@
+pipeline {
+    agent any 
+    
+    environment {
+        COMPOSE_FILE = 'docker-compose.yml'
+    }
+    
+    stages {
+        stage('Code Checkout') {
+            steps {
+                echo 'Cloning GitHub repo…'
+                git branch: 'main',
+                    url: 'https://github.com/Rohit03022006/2-Tier-Application.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Building Docker image...'
+                sh 'docker build -t rohitxten/flaskapp:latest .'
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                echo 'Pushing to DockerHub...'
+                withCredentials([usernamePassword(
+                    credentialsId: 'Dockerhub',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push rohitxten/flaskapp:latest
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deploying application...'
+                sh '''
+                    docker compose -f ${COMPOSE_FILE} down --remove-orphans || true 
+                    docker compose -f ${COMPOSE_FILE} up -d --pull always
+                '''
+            }
+        }
+    }     
+    
+    post {
+        failure {
+            echo 'Pipeline failed! Check logs for errors.'
+        }
+        success {
+            echo 'Pipeline succeeded! Application deployed.'
+            sh '''
+                echo "Application deployed successfully!"
+                echo "Flask app: http://localhost:5000"
+                echo "MySQL port: 3306"
+                docker compose -f ${COMPOSE_FILE} ps
+            '''
+        }
+    }
+}
