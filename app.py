@@ -19,6 +19,7 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 mysql = MySQL(app)
 
 def init_db():
+    """Initialize the database and create tables if they don't exist"""
     try:
         with app.app_context():
             cur = mysql.connection.cursor()
@@ -37,6 +38,13 @@ def init_db():
     except Exception as e:
         print(f"Error initializing database: {e}")
         print("Please check your MySQL connection settings in the .env file")
+        
+with app.app_context():
+    try:
+        init_db()
+    except Exception as e:
+        print(f"Failed to initialize database on startup: {e}")
+        print("Database will be initialized when first accessed")
 
 @app.before_request
 def make_session_permanent():
@@ -47,6 +55,11 @@ def make_session_permanent():
 @app.route('/')
 def index():
     try:
+        try:
+            init_db()
+        except:
+            pass  
+            
         cur = mysql.connection.cursor()
         cur.execute('SELECT id, message, created_at, user_id FROM messages ORDER BY created_at DESC')
         messages = cur.fetchall()
@@ -159,5 +172,6 @@ def health_check():
         return jsonify({'status': 'unhealthy', 'database': 'disconnected', 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    init_db()
+    with app.app_context():
+        init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)

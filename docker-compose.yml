@@ -26,11 +26,8 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      # Remove the init.sql volume mount and use a different approach
     networks:
       - app-network
-    # Add command to initialize database without volume mount
-    command: --init-file /docker-entrypoint-initdb.d/init.sql
 
 volumes:
   mysql-data:
