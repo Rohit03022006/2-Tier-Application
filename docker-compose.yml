@@ -1,0 +1,38 @@
+services:
+  backend:
+    image: rohitxten/flaskapp:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - MYSQL_HOST=my-sql-db
+      - MYSQL_USER=flask_user
+      - MYSQL_PASSWORD=password
+      - MYSQL_DB=flask_messenger
+      - SECRET_KEY=your-secret-key-change-in-production
+    depends_on:
+      - my-sql-db
+    networks:
+      - app-network
+
+  my-sql-db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=flask_messenger
+      - MYSQL_USER=flask_user
+      - MYSQL_PASSWORD=password
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+
+volumes:
+  mysql-data:
+
+networks:
+  app-network:
+    driver: bridge
